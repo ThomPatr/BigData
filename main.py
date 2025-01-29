@@ -11,12 +11,16 @@ if __name__ == '__main__':
     spark = (SparkSession.builder
              .appName("InSDN")
              .getOrCreate())
+    
+    # ??? LOGISTIC REGRESSION IS USED WHEN THE DEPENDENT VARIABLE IS BINARY ??? 
+    # In this case, the label is not binery. Has to be used Multinomial Logistic Regression? Or the label has to be binarized?
 
     # Load dataset
     input_directory = "/home/ilaria/Scaricati/InSDN_DatasetCSV"
     data = spark.read.csv(input_directory, header=True, inferSchema=True)
     data.show()
-    data = data.withColumnRenamed("brute-force-attack", "label")  # Adjust "label_column" to the dataset's label column
+    data = data.withColumnRenamed("brute-force-attack", "label")  # Adjust "label_column" to the dataset's label column 
+    # ??? THERE IS NO brute-force-attack COLUMN IN THE DATASET ???
 
     # Preprocessing
     features = [col for col in data.columns if col != "label"]
