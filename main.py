@@ -6,7 +6,16 @@ from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.ml.tuning import ParamGridBuilder, TrainValidationSplit
 from pyspark.ml.feature import StringIndexer
 from pyspark.sql.functions import when
+from pyspark.ml.feature import StringIndexer
+from pyspark.sql.functions import when
 
+# Avvia Spark
+spark = (SparkSession.builder
+         .appName("InSDN Optimized")
+         .getOrCreate())
+
+# Configura Spark per limitare l'output del piano di esecuzione
+spark.conf.set("spark.sql.debug.maxToStringFields", 100)
 # Avvia Spark
 spark = (SparkSession.builder
          .appName("InSDN Optimized")
@@ -45,6 +54,8 @@ features = [col for col in data.columns if col != "Label" and col != "label_inde
 assembler = VectorAssembler(inputCols=features, outputCol="featuresAssembled")
 scaler = StandardScaler(inputCol="featuresAssembled", outputCol="features_standard")
 
+# Dividi il dataset in training e test
+train, test = data.randomSplit([0.8, 0.2], seed=42)
 # Dividi il dataset in training e test
 train, test = data.randomSplit([0.8, 0.2], seed=42)
 
