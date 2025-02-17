@@ -5,9 +5,6 @@ from pyspark.ml.classification import RandomForestClassifier, DecisionTreeClassi
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.ml.tuning import ParamGridBuilder, TrainValidationSplit
 from pyspark.ml.feature import StringIndexer
-from pyspark.sql.functions import when
-from pyspark.ml.feature import StringIndexer
-from pyspark.sql.functions import when
 
 # Avvia Spark
 spark = (SparkSession.builder
