@@ -1,5 +1,6 @@
 from pyspark.sql import SparkSession
 from pyspark.ml.feature import StringIndexer
+from pyspark.sql.functions import rand
 import os
 import shutil
 import json
@@ -22,10 +23,6 @@ if __name__=='__main__':
 
     data = methods.load_data(spark, config.PATH)
 
-    json_schema = data.schema.json() # Get the schema of the DataFrame in JSON format
-    with open("schema.json", "w") as f:
-        f.write(json_schema)
-
     print("\n###### DATA PREPRATION ######")
     print("\n1. Data Cleaning")
     preprocessor = Preprocessing(data)
@@ -34,7 +31,18 @@ if __name__=='__main__':
     # Divide the dataset into train, test and prediction sets (the prediction set will be used to test streaming)
     print("\nSuddividiamo il dataset in tre porzioni per il training del modello, il testing delle performance e la predizione in real-time.")
     train, test, prediction = methods.stratified_split(data_cleaned, "Label", (0.8, 0.18, 0.02), seed=42)
-    prediction = prediction.drop("Label") # Drop the label column from the prediction set
+
+    label_indexer = StringIndexer(inputCol="Label", outputCol="label_indexed")
+    train = label_indexer.fit(train).transform(train)
+    test = label_indexer.fit(test).transform(test) # This is the test set that will be used to test the model
+    prediction = label_indexer.fit(prediction).transform(prediction)
+
+    json_schema = train.schema.json() # Get the schema of the DataFrame in JSON format
+    with open("schema.json", "w") as f:
+        f.write(json_schema)
+
+    # prediction = prediction.drop("Label") # Drop the label column from the prediction set
+    prediction = prediction.orderBy(rand())
 
     temp_dir = "new_datasets/streaming_temp"
     prediction.write.mode("overwrite").options(header=True).csv(temp_dir) # Save the prediction set to a CSV file
@@ -56,10 +64,6 @@ if __name__=='__main__':
 
     # This is the train set that will be used to train the model
     balanced_train = methods.load_data(spark, config.BALANCED_TRAIN_PATH)
-
-    label_indexer = StringIndexer(inputCol="Label", outputCol="label_indexed")
-    # This is the test set that will be used to test the model
-    test = label_indexer.fit(test).transform(test)
 
     print("\n###### DATA ANALYSIS ######")
     classificator = Classification()

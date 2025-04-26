@@ -34,18 +34,18 @@ class Classification():
         evaluator_rf_pca = MulticlassClassificationEvaluator(labelCol="label_indexed", predictionCol="prediction", metricName="accuracy")
         
         pipeline_rf_pca = Pipeline(stages=[assembler, scaler, pca, rf])
-        cv_rf_pca = CrossValidator(estimator=pipeline_rf_pca,
+        """ cv_rf_pca = CrossValidator(estimator=pipeline_rf_pca,
                                    estimatorParamMaps=paramGrid_rf_pca,
                                    evaluator=evaluator_rf_pca,
-                                   numFolds=5) # 5-fold cross-validation
+                                   numFolds=5) # 5-fold cross-validation """
         
         
-        """ tvs_rf_pca = TrainValidationSplit(estimator=pipeline_rf_pca,
+        tvs_rf_pca = TrainValidationSplit(estimator=pipeline_rf_pca,
                                          estimatorParamMaps=paramGrid_rf_pca,
                                          evaluator=evaluator_rf_pca,
-                                         trainRatio=0.8) """
+                                         trainRatio=0.8)
 
-        model = cv_rf_pca.fit(train)
+        model = tvs_rf_pca.fit(train)
         predictions = model.transform(test)
 
         accuracy = evaluator_rf_pca.evaluate(predictions)
@@ -92,15 +92,15 @@ class Classification():
         
         evaluator_dt_pca = MulticlassClassificationEvaluator(labelCol="label_indexed", predictionCol="prediction", metricName="accuracy")
         pipeline_dt_pca = Pipeline(stages=[assembler, scaler, pca, dt])
-        cv_dt_pca = CrossValidator(estimator=pipeline_dt_pca,
+        """ cv_dt_pca = CrossValidator(estimator=pipeline_dt_pca,
                                    estimatorParamMaps=paramGrid_dt_pca,
                                    evaluator=evaluator_dt_pca,
-                                   numFolds=5)
-        """ tvs_dt_pca = TrainValidationSplit(estimator=pipeline_dt_pca,
+                                   numFolds=5) """
+        tvs_dt_pca = TrainValidationSplit(estimator=pipeline_dt_pca,
                                          estimatorParamMaps=paramGrid_dt_pca,
                                          evaluator=evaluator_dt_pca,
-                                         trainRatio=0.8) """
-        model = cv_dt_pca.fit(train)
+                                         trainRatio=0.8)
+        model = tvs_dt_pca.fit(train)
         predictions = model.transform(test)
 
         accuracy = evaluator_dt_pca.evaluate(predictions)
@@ -156,16 +156,16 @@ class Classification():
         
         evaluator_mlp_pca = MulticlassClassificationEvaluator(labelCol="label_indexed", predictionCol="prediction", metricName="accuracy")
         pipeline_mlp_pca = Pipeline(stages=[assembler, scaler, pca, mlp])
-        cv_mlp_pca = CrossValidator(estimator=pipeline_mlp_pca,
+        """ cv_mlp_pca = CrossValidator(estimator=pipeline_mlp_pca,
                                    estimatorParamMaps=paramGrid_mlp_pca,
                                    evaluator=evaluator_mlp_pca,
-                                   numFolds=5)
-        """ tvs_mlp_pca = TrainValidationSplit(estimator=pipeline_mlp_pca,
+                                   numFolds=5) """
+        tvs_mlp_pca = TrainValidationSplit(estimator=pipeline_mlp_pca,
                                          estimatorParamMaps=paramGrid_mlp_pca,
                                          evaluator=evaluator_mlp_pca,
-                                         trainRatio=0.8) """
+                                         trainRatio=0.8)
         
-        model = cv_mlp_pca.fit(train)
+        model = tvs_mlp_pca.fit(train)
         predictions = model.transform(test)
 
         accuracy = evaluator_mlp_pca.evaluate(predictions)

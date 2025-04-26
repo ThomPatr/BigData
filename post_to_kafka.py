@@ -19,14 +19,15 @@ def post_to_kafka():
             rows = list(reader)
             for row in rows:
                 # Send the row as a message to the Kafka topic
+                print(row)
                 producer.send(config.TOPIC_NAME, value=row)
-                print(f"Inviato: {row}")
-
+                print(f"\nInviato: {row}")
                 time.sleep(random.randint(0, 5))
     except Exception as e:
         print(f"Si è verificato un errore: {e}")
 
 if __name__ == "__main__":
+    time.sleep(10) # Wait for the Kafka topic to be created
     while True:
         post_to_kafka()
     

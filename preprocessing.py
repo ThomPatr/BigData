@@ -17,12 +17,10 @@ class Preprocessing():
     def  __init__(self, df):
         self.df = df
 
-    def convert_and_assemble(self, df, columns):
-        label_indexer = StringIndexer(inputCol="Label", outputCol="label_indexed")
+    def assemble(self, columns):
         assembler = VectorAssembler(inputCols=columns, outputCol="features_assembled")
 
-        pipeline = Pipeline(stages=[label_indexer, assembler])
-        return pipeline
+        return assembler
 
 
     def nullCount(self, df):
@@ -183,8 +181,8 @@ class Preprocessing():
         train_df = train_df.drop(*categorical_columns)
 
         # 2. Modify the dataframe: we need to convert the Label column to a numerical format and assemble the features into a single vector
-        initial_pipeline = self.convert_and_assemble(train_df, numeric_columns)
-        initial_train_df = initial_pipeline.fit(train_df).transform(train_df)
+        initial_assembler = self.assemble(numeric_columns)
+        initial_train_df = initial_assembler.transform(train_df)
 
         # Show the conversion of the Label column
         print("Conversione della colonna Label in formato numerico:")
@@ -196,8 +194,8 @@ class Preprocessing():
         # 3.2 Correlation-based Feature Selection
         final_selected_features = self.apply_correlation_selector(spark, initial_train_df, selected_features)
 
-        new_pipeline = self.convert_and_assemble(train_df, final_selected_features)
-        new_train_df = new_pipeline.fit(train_df).transform(train_df)
+        new_assembler = self.assemble(final_selected_features)
+        new_train_df = new_assembler.transform(train_df)
 
         # 4. Handle classes imbalance
         self.smoteen_balancing(new_train_df, final_selected_features)
