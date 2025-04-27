@@ -1,0 +1,3 @@
+# Intrusion Prevention System
+Questo lavoro è nato con l'obiettivo di **simulare il funzionamento di un IPS**: utilizzando un dataset contenente sia traffico lecito che malevolo, sono stati addestrati diversi modelli di machine learning (Random Forest, Decision Tree, Multilayer Perceptron). Dopo aver valutato le loro performance, in termini di accuratezza, recall e precision, è stato selezionato il modello migliore ed è stato poi applicato in uno ***scenario real-time***.\
+In generale, la pipeline di un progetto di Machine Learning è un processo strutturato che prevede diverse fasi, dall'acquisizione dei dati fino alla messa in produzione del modello. Nel nostro caso, i principali step sono i seguenti.
