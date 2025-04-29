@@ -28,16 +28,13 @@ if __name__=='__main__':
     preprocessor = Preprocessing(data)
     data_cleaned = preprocessor.clean_data()
 
+    label_indexer = StringIndexer(inputCol="Label", outputCol="label_indexed")
+    data_cleaned = label_indexer.fit(data_cleaned).transform(data_cleaned) # Transform the label column into a numerical column
     # Divide the dataset into train, test and prediction sets (the prediction set will be used to test streaming)
     print("\nSuddividiamo il dataset in tre porzioni per il training del modello, il testing delle performance e la predizione in real-time.")
     train, test, prediction = methods.stratified_split(data_cleaned, "Label", (0.8, 0.18, 0.02), seed=42)
 
-    label_indexer = StringIndexer(inputCol="Label", outputCol="label_indexed")
-    train = label_indexer.fit(train).transform(train)
-    test = label_indexer.fit(test).transform(test) # This is the test set that will be used to test the model
-    prediction = label_indexer.fit(prediction).transform(prediction)
-
-    json_schema = train.schema.json() # Get the schema of the DataFrame in JSON format
+    json_schema = prediction.schema.json() # Get the schema of the DataFrame in JSON format
     with open("schema.json", "w") as f:
         f.write(json_schema)
 
