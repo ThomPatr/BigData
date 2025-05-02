@@ -24,12 +24,12 @@ class Classification():
         scaler = StandardScaler(inputCol="features_assembled", outputCol="features_scaled")
 
         if config.pca_bool:
-            print("Utilizziamo la PCA.")
+            # print("Utilizziamo la PCA.")
             pca = PCA(k=5, inputCol="features_scaled", outputCol="pca_features") # Reduce the dimensionality of the features to 5 components
             rf = RandomForestClassifier(featuresCol="pca_features", labelCol="label_indexed")
             pipeline_rf = Pipeline(stages=[assembler, scaler, pca, rf])
         else:
-            print("Non utilizziamo la PCA.")
+            # print("Non utilizziamo la PCA.")
             rf = RandomForestClassifier(featuresCol="features_scaled", labelCol="label_indexed")
             pipeline_rf = Pipeline(stages=[assembler, scaler, rf])
 
@@ -41,13 +41,13 @@ class Classification():
         evaluator_rf = MulticlassClassificationEvaluator(labelCol="label_indexed", predictionCol="prediction", metricName="accuracy")
         
         if config.cross_validation_bool:
-            print("Utilizziamo la cross-validation.")
+            # print("Utilizziamo la cross-validation.")
             validator = CrossValidator(estimator=pipeline_rf,
                                     estimatorParamMaps=paramGrid_rf,
                                     evaluator=evaluator_rf,
                                     numFolds=5) # 5-fold cross-validation
         else:
-            print("Utilizziamo la train-validation split.")
+            # print("Utilizziamo la train-validation split.")
             validator = TrainValidationSplit(estimator=pipeline_rf,
                                             estimatorParamMaps=paramGrid_rf,
                                             evaluator=evaluator_rf,
@@ -61,10 +61,10 @@ class Classification():
         recall = MulticlassClassificationEvaluator(labelCol="label_indexed", predictionCol="prediction", metricName="weightedRecall").evaluate(predictions)
         f1 = MulticlassClassificationEvaluator(labelCol="label_indexed", predictionCol="prediction", metricName="f1").evaluate(predictions)
 
-        print(f"Random Forest Accuracy: {accuracy:.2f}")
-        print(f"Random Forest Precision: {precision:.2f}")
-        print(f"Random Forest Recall: {recall:.2f}")
-        print(f"Random Forest F1 Score: {f1:.2f}")
+        print(f"Random Forest Accuracy: {accuracy:.6f}")
+        print(f"Random Forest Precision: {precision:.6f}")
+        print(f"Random Forest Recall: {recall:.6f}")
+        print(f"Random Forest F1 Score: {f1:.6f}")
 
         # Let's represent the confusion matrix
         predictions_pd = predictions.toPandas()
@@ -123,10 +123,10 @@ class Classification():
         recall = MulticlassClassificationEvaluator(labelCol="label_indexed", predictionCol="prediction", metricName="weightedRecall").evaluate(predictions)
         f1 = MulticlassClassificationEvaluator(labelCol="label_indexed", predictionCol="prediction", metricName="f1").evaluate(predictions)
 
-        print(f"Decision Tree Accuracy: {accuracy:.2f}")
-        print(f"Decision Tree Precision: {precision:.2f}")
-        print(f"Decision Tree Recall: {recall:.2f}")
-        print(f"Decision Tree F1 Score: {f1:.2f}")
+        print(f"Decision Tree Accuracy: {accuracy:.6f}")
+        print(f"Decision Tree Precision: {precision:.6f}")
+        print(f"Decision Tree Recall: {recall:.6f}")
+        print(f"Decision Tree F1 Score: {f1:.6f}")
 
         # Let's represent the confusion matrix
         predictions_pd = predictions.toPandas()
@@ -201,10 +201,10 @@ class Classification():
         recall = MulticlassClassificationEvaluator(labelCol="label_indexed", predictionCol="prediction", metricName="weightedRecall").evaluate(predictions)
         f1 = MulticlassClassificationEvaluator(labelCol="label_indexed", predictionCol="prediction", metricName="f1").evaluate(predictions)
 
-        print(f"Multilayer Perceptron Accuracy: {accuracy:.2f}")
-        print(f"Multilayer Perceptron Precision: {precision:.2f}")
-        print(f"Multilayer Perceptron Recall: {recall:.2f}")
-        print(f"Multilayer Perceptron F1 Score: {f1:.2f}")
+        print(f"Multilayer Perceptron Accuracy: {accuracy:.6f}")
+        print(f"Multilayer Perceptron Precision: {precision:.6f}")
+        print(f"Multilayer Perceptron Recall: {recall:.6f}")
+        print(f"Multilayer Perceptron F1 Score: {f1:.6f}")
 
         # Let's represent the confusion matrix
         predictions_pd = predictions.toPandas()

@@ -14,8 +14,8 @@ import config
 
 class Preprocessing():
 
-    def  __init__(self, df):
-        self.df = df
+    def  __init__(self):
+        pass
 
     def assemble(self, columns):
         assembler = VectorAssembler(inputCols=columns, outputCol="features_assembled")
@@ -37,26 +37,27 @@ class Preprocessing():
         duplicateCounts = df.groupBy(df.columns).agg(count("*").alias("count")).filter(col("count") > 1).count()
         return duplicateCounts
 
-    def clean_data(self):
+    def clean_data(self, df):
         
         # Analyze the data and clean it
-        print(f"\nIl numero totale di record nel dataset è: {self.df.count()}")
+        print(f"\nIl numero totale di record nel dataset è: {df.count()}")
         print(f"Verifichiamo che non ci siano valori mancanti all'interno del dataset.")
-        totalNulls = self.nullCount(self.df)
+        totalNulls = self.nullCount(df)
 
         if totalNulls > 0:
             print("Procediamo con l'eliminazione dei record con valori nulli.")
-            self.df = self.df.na.drop(subset=['Label'])
-            totalNulls = self.nullCount(self.df)
+            df = df.na.drop(subset=['Label'])
+            totalNulls = self.nullCount(df)
 
-        duplicateCounts = self.duplicateCounts(self.df)
+        duplicateCounts = self.duplicateCounts(df)
         print(f"Il numero totale di record duplicati nel dataset è: {duplicateCounts}")
 
-        print(f"\nIl numero totale di colonne presenti all'interno del dataset è: {len(self.df.columns)}. Sarà necessario rimuovere le colonne che non sono utili per l'analisi.")
+        print(f"\nIl numero totale di colonne presenti all'interno del dataset è: {len(df.columns)}. Sarà necessario rimuovere le colonne che non sono utili per l'analisi.")
+        print(f"Le colonne presenti all'interno del dataset sono: {df.columns}")
         print("Analizziamo il numero di valori che appartengono a ciascuna classe della variabile target Label.")
-        self.df.groupBy("Label").count().show()
+        df.groupBy("Label").count().show()
         print("Si osserva che il DATASET è fortemente SBILANCIATO.")
-        return self.df
+        return df
     
     def apply_variance_selector(self,train_df, columns):
         # Apply variance selector to the columns
@@ -151,7 +152,7 @@ class Preprocessing():
 
         print("Numero di record e di colonne prima del bilanciamento:", X_train.shape)
         print("Numero di record e di colonne dopo il bilanciamento:", X_resampled.shape)
-        print(f"Il numero di record per ciascuna classe dopo il bilanciamento è:\n{pd.Series(y_resampled).value_counts().sort_index().to_string(index=True, header=False)}")
+        print(f"Il numero di record per ciascuna classe dopo il bilanciamento del training dataset è:\n{pd.Series(y_resampled).value_counts().sort_index().to_string(index=True, header=False)}")
 
         # Recreate the DataFrame with the resampled data
         resampled_df = pd.DataFrame(X_resampled, columns=final_features)
@@ -174,10 +175,12 @@ class Preprocessing():
     def preprocessing(self, spark, train_df):
         # Preprocess the data
         # 1. Remove unnecessary columns
-        numeric_columns = [col for col, dtype in train_df.dtypes if dtype != "string"]
+        train_df = train_df.drop("Src Port")
+        train_df = train_df.drop("Dst Port")
+        numeric_columns = [col for col, dtype in train_df.dtypes if dtype != "string" and col != "label_indexed"]
         categorical_columns = [col for col, dtype in train_df.dtypes if dtype == "string" and col != "Label"]
 
-        print(f"\nEliminiamo le colonne che non sono utili per la classificazione: {categorical_columns}.")
+        print(f"\nEliminiamo le colonne che non sono utili per la classificazione: {categorical_columns + ['Src Port', 'Dst Port']}.")
         train_df = train_df.drop(*categorical_columns)
 
         # 2. Modify the dataframe: we need to convert the Label column to a numerical format and assemble the features into a single vector

@@ -17,7 +17,7 @@ MODEL_PATH = './model'
 BOOTSTRAP_SERVER = 'localhost:9092'
 TOPIC_NAME = 'traffic-data'
 
-pca_bool = False  # Set to True to use PCA for dimensionality reduction
-cross_validation_bool = False  # Set to True to use cross-validation
+pca_bool = True  # Set to True to use PCA for dimensionality reduction
+cross_validation_bool = True  # Set to True to use cross-validation
 
 

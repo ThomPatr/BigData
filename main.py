@@ -25,8 +25,8 @@ if __name__=='__main__':
 
     print("\n###### DATA PREPRATION ######")
     print("\n1. Data Cleaning")
-    preprocessor = Preprocessing(data)
-    data_cleaned = preprocessor.clean_data()
+    preprocessor = Preprocessing()
+    data_cleaned = preprocessor.clean_data(data)
 
     label_indexer = StringIndexer(inputCol="Label", outputCol="label_indexed")
     data_cleaned = label_indexer.fit(data_cleaned).transform(data_cleaned) # Transform the label column into a numerical column
@@ -53,8 +53,14 @@ if __name__=='__main__':
     shutil.rmtree(temp_dir) # Remove the temporary directory
 
     print(f"Il numero totale di record nel dataset di training è: {train.count()}.")
+    print("Il dataset di training contiene i seguenti valori per ciascuna classe.")
+    train.groupBy('Label').count().show()
     print(f"Il numero totale di record nel dataset di test è: {test.count()}.")
+    print("Il dataset di test contiene i seguenti valori per ciascuna classe.")
+    test.groupBy('Label').count().show()
     print(f"Il numero totale di record nel dataset di prediction è: {prediction.count()}.")
+    print("Il prediction dataset contiene i seguenti valori per ciascuna classe.")
+    prediction.groupBy('Label').count().show()
 
     print("\n2. Feature Selection and Data Balancing")
     selected_features = preprocessor.preprocessing(spark, train)
@@ -63,6 +69,15 @@ if __name__=='__main__':
     balanced_train = methods.load_data(spark, config.BALANCED_TRAIN_PATH)
 
     print("\n###### DATA ANALYSIS ######")
+    if config.pca_bool:
+            print("Utilizziamo la PCA.")
+    else:
+            print("Non utilizziamo la PCA.")
+    if config.cross_validation_bool:
+            print("Utilizziamo la cross-validation.")
+    else:
+            print("Utilizziamo la train-validation.")
+
     classificator = Classification()
     classificator.best_model(balanced_train, test, selected_features)
     
