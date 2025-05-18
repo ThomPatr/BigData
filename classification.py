@@ -8,6 +8,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import numpy as np
+import time
+import matplotlib
+matplotlib.use("Agg")  # Use a non-interactive backend for matplotlib
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import label_binarize
+from sklearn.metrics import roc_curve, auc
 
 import config
 
@@ -15,6 +21,39 @@ class Classification():
 
     def __init__(self):
         pass
+
+    def plot_roc_curve(self, preds_pd, model_name):
+        y_true = preds_pd["label_indexed"].values.astype(int)
+        y_score = np.vstack(preds_pd["probability"].apply(lambda x: x.toArray()).values)
+
+        classes = np.unique(y_true)
+        y_bin = label_binarize(y_true, classes=classes)
+        fpr = dict()
+        tpr = dict()
+        roc_auc = dict()
+
+        # For each class
+        for i in range(len(classes)):
+            fpr[i], tpr[i], _ = roc_curve(y_bin[:, i], y_score[:, i])
+            roc_auc[i] = auc(fpr[i], tpr[i])
+
+        plt.figure(figsize=(10, 7))
+
+        for i in range(len(classes)):
+            plt.plot(fpr[i], tpr[i],
+                    label=f"Class {classes[i]} (AUC = {roc_auc[i]:.6f})")
+
+        plt.plot([0, 1], [0, 1], 'k--', label='Random Guess')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel("False Positive Rate")
+        plt.ylabel("True Positive Rate")
+        plt.title(f"{model_name} Multi-class ROC Curve")
+        plt.legend(loc="lower right")
+        plt.grid(True)
+        plt.tight_layout()
+
+
 
     def rf_classification(self, train, test, final_features):
         # Random Forest Classification
@@ -52,8 +91,10 @@ class Classification():
                                             estimatorParamMaps=paramGrid_rf,
                                             evaluator=evaluator_rf,
                                             trainRatio=0.8)
-
+        start_time = time.time()
         model = validator.fit(train)
+        train_time = time.time() - start_time
+        print(f"Tempo di addestramento del modello: {train_time:.2f} secondi")
         predictions = model.transform(test)
 
         accuracy = evaluator_rf.evaluate(predictions)
@@ -68,6 +109,11 @@ class Classification():
 
         # Let's represent the confusion matrix
         predictions_pd = predictions.toPandas()
+        self.plot_roc_curve(predictions_pd, "Random Forest")
+        plt.savefig(config.FIGURES_PATH + "/rf_roc_curve.png", dpi=300)
+        plt.show()
+        plt.close()
+
         conf_matrix = confusion_matrix(predictions_pd["label_indexed"], predictions_pd["prediction"])
         labels = sorted(predictions_pd["label_indexed"].unique()) # Get the unique labels
 
@@ -80,9 +126,10 @@ class Classification():
         plt.title("Random Forest - Confusion Matrix")
         plt.tight_layout()
         plt.savefig(config.FIGURES_PATH + "/random_forest_confusion_matrix.png", dpi=300)
+        plt.show()
         plt.close()
 
-        return model, accuracy, precision, recall, f1
+        return model, accuracy, precision, recall, f1, train_time
 
     def dt_classification(self, train, test, final_features):
         # Decision Tree Classification
@@ -115,7 +162,11 @@ class Classification():
                                             estimatorParamMaps=paramGrid_dt,
                                             evaluator=evaluator_dt,
                                             trainRatio=0.8)
+        
+        start_time = time.time()
         model = validator.fit(train)
+        train_time = time.time() - start_time
+        print(f"Tempo di addestramento del modello: {train_time:.2f} secondi")
         predictions = model.transform(test)
 
         accuracy = evaluator_dt.evaluate(predictions)
@@ -130,6 +181,11 @@ class Classification():
 
         # Let's represent the confusion matrix
         predictions_pd = predictions.toPandas()
+        self.plot_roc_curve(predictions_pd, "Decision Tree")
+        plt.savefig(config.FIGURES_PATH + "/dt_roc_curve.png", dpi=300)
+        plt.show()
+        plt.close()
+
         conf_matrix = confusion_matrix(predictions_pd["label_indexed"], predictions_pd["prediction"])
         labels = sorted(predictions_pd["label_indexed"].unique())
 
@@ -141,9 +197,10 @@ class Classification():
         plt.title("Decision Tree - Confusion Matrix")
         plt.tight_layout()
         plt.savefig(config.FIGURES_PATH + "/decision_tree_confusion_matrix.png", dpi=300)
+        plt.show()
         plt.close()
 
-        return model, accuracy, precision, recall, f1
+        return model, accuracy, precision, recall, f1, train_time
     
     def mlp_classification(self, train, test, final_features):
         # Multilayer Perceptron Classification
@@ -193,7 +250,10 @@ class Classification():
                                             evaluator=evaluator_mlp,
                                             trainRatio=0.8)
         
+        start_time = time.time()
         model = validator.fit(train)
+        train_time = time.time() - start_time
+        print(f"Tempo di addestramento del modello: {train_time:.2f} secondi")
         predictions = model.transform(test)
 
         accuracy = evaluator_mlp.evaluate(predictions)
@@ -208,6 +268,11 @@ class Classification():
 
         # Let's represent the confusion matrix
         predictions_pd = predictions.toPandas()
+        self.plot_roc_curve(predictions_pd, "Multilayer Perceptron")
+        plt.savefig(config.FIGURES_PATH + "/mlp_roc_curve.png", dpi=300)
+        plt.show()
+        plt.close()
+
         conf_matrix = confusion_matrix(predictions_pd["label_indexed"], predictions_pd["prediction"])
         labels = sorted(predictions_pd["label_indexed"].unique())
 
@@ -219,42 +284,46 @@ class Classification():
         plt.title("Multilayer Perceptron - Confusion Matrix")
         plt.tight_layout()
         plt.savefig(config.FIGURES_PATH + "/mlp_confusion_matrix.png", dpi=300)
+        plt.show()
         plt.close()
 
-        return model, accuracy, precision, recall, f1
+        return model, accuracy, precision, recall, f1, train_time
     
     def best_model(self, train, test, final_features):
 
         results = {}
 
         # Random Forest
-        rf_model, rf_accuracy, rf_precision, rf_recall, rf_f1 = self.rf_classification(train, test, final_features)
+        rf_model, rf_accuracy, rf_precision, rf_recall, rf_f1, rf_train_time = self.rf_classification(train, test, final_features)
         results["Random Forest"] = {
             "Model": rf_model,
             "Accuracy": rf_accuracy,
             "Precision": rf_precision,
             "Recall": rf_recall,
-            "F1 Score": rf_f1
+            "F1 Score": rf_f1,
+            "Train Time": rf_train_time
         }
 
         # Decision Tree
-        dt_model, dt_accuracy, dt_precision, dt_recall, dt_f1 = self.dt_classification(train, test, final_features)
+        dt_model, dt_accuracy, dt_precision, dt_recall, dt_f1, dt_train_time = self.dt_classification(train, test, final_features)
         results["Decision Tree"] = {
             "Model": dt_model,
             "Accuracy": dt_accuracy,
             "Precision": dt_precision,
             "Recall": dt_recall,
-            "F1 Score": dt_f1
+            "F1 Score": dt_f1,
+            "Train Time": dt_train_time
         }
 
         # Multilayer Perceptron
-        mlp_model, mlp_accuracy, mlp_precision, mlp_recall, mlp_f1 = self.mlp_classification(train, test, final_features)
+        mlp_model, mlp_accuracy, mlp_precision, mlp_recall, mlp_f1, mlp_train_time = self.mlp_classification(train, test, final_features)
         results["Multilayer Perceptron"] = {
             "Model": mlp_model,
             "Accuracy": mlp_accuracy,
             "Precision": mlp_precision,
             "Recall": mlp_recall,
-            "F1 Score": mlp_f1
+            "F1 Score": mlp_f1,
+            "Train Time": mlp_train_time
         }
 
         # Find the best model based on accuracy
@@ -263,3 +332,25 @@ class Classification():
 
         model = results[best_model_name]["Model"]
         model.write().overwrite().save(config.MODEL_PATH)
+
+        model_names = list(results.keys())
+        training_times = [results[name]["Train Time"] for name in model_names]
+        sorted_data = sorted(zip(training_times, model_names))
+        training_times_sorted, model_names_sorted = zip(*sorted_data)
+
+        plt.figure(figsize=(10, 6))
+        bars = plt.barh(model_names_sorted, training_times_sorted, color='cornflowerblue')
+        for bar in bars:
+            width = bar.get_width()
+            plt.text(width + 0.1, bar.get_y() + bar.get_height() / 2,
+                    f'{width:.2f}s', va='center', fontsize=9)
+
+        plt.xlabel("Training Time (seconds)")
+        plt.ylabel("Model")
+        plt.title("Comparison of Model Training Times")
+        plt.grid(axis='x', linestyle='--', alpha=0.7)
+
+        plt.tight_layout()
+        plt.savefig(config.FIGURES_PATH + "/time_comparison.png", dpi=300, bbox_inches="tight")
+        plt.show()
+        plt.close()

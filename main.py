@@ -1,6 +1,6 @@
 from pyspark.sql import SparkSession
 from pyspark.ml.feature import StringIndexer
-from pyspark.sql.functions import rand
+from pyspark.sql.functions import rand, when
 import os
 import shutil
 import json
@@ -22,7 +22,8 @@ if __name__=='__main__':
                 .getOrCreate())
 
     data = methods.load_data(spark, config.PATH)
-
+    data = data.withColumn("Label", when(data.Label == "DDoS ","DDoS").otherwise(data.Label)) # Remove the trailing space from the DDoS label
+    
     print("\n###### DATA PREPRATION ######")
     print("\n1. Data Cleaning")
     preprocessor = Preprocessing()

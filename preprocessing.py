@@ -1,5 +1,5 @@
 from pyspark.ml import Pipeline
-from pyspark.ml.feature import StringIndexer, VectorAssembler, VarianceThresholdSelector
+from pyspark.ml.feature import VectorAssembler, VarianceThresholdSelector
 from pyspark.ml.stat import Correlation
 from pyspark.sql.functions import col, count, isnan, when, abs
 from imblearn.combine import SMOTEENN
@@ -100,6 +100,7 @@ class Preprocessing():
                     annot=True)
         plt.title("Matrice di correlazione - Metodo di Spearman", fontsize=30)
         plt.savefig(config.FIGURES_PATH + "/correlation_matrix.png", dpi=300, bbox_inches="tight")
+        plt.show()
         plt.close()
         # plt.show()
 
@@ -141,6 +142,7 @@ class Preprocessing():
         plt.xlabel("Label Indexed")
         plt.ylabel("Count")
         plt.savefig(config.FIGURES_PATH + "/before_smoteen.png", dpi=300, bbox_inches="tight")
+        plt.show()
         plt.close()
 
         # --- SMOTEEN BALANCING ---
@@ -170,6 +172,7 @@ class Preprocessing():
         plt.xlabel("Label Indexed")
         plt.ylabel("Count")
         plt.savefig(config.FIGURES_PATH + "/after_smoteen.png", dpi=300, bbox_inches="tight")
+        plt.show()
         plt.close()
 
     def preprocessing(self, spark, train_df):

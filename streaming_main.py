@@ -16,7 +16,7 @@ if __name__ == '__main__':
              .appName("Real-time Intrusion Detection System")
              .config("spark.streaming.stopGracefullyOnShutdown", True)
              .config("spark.sql.streaming.schemeInference", True)
-             #.config("spark.jars.packages", "org.apache.spark:spark-streaming-kafka-0-10_2.12:3.3.0")
+             #.config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0")
              .config("spark.sql.shuffle.partitions", 4)
              .master("local[*]")
              .getOrCreate())
@@ -31,8 +31,8 @@ if __name__ == '__main__':
                 .option("startingOffsets", "latest")
                 .load())
     
-    print("Schema del DataFrame di Kafka:")
-    kafka_df.printSchema()
+    #print("Schema del DataFrame di Kafka:")
+    #kafka_df.printSchema()
 
     # Parse the value from binary to string into kafka_json_df
     kafka_json_df = kafka_df.withColumn("value", expr("cast(value as string)"))
@@ -54,22 +54,29 @@ if __name__ == '__main__':
             streaming_df = streaming_df.withColumn(el.name, col(el.name).cast("double"))
 
 
-    print("Schema del DataFrame di Kafka dopo la lettura del payload JSON:")
-    streaming_df.printSchema()
+    #print("Schema del DataFrame di Kafka dopo la lettura del payload JSON:")
+    #streaming_df.printSchema()
 
     streaming_df = streaming_df.withColumn("flow_id_backup", col("Flow ID"))
     streaming_df = streaming_df.withColumn("label_verification", col("label_indexed"))
 
     # Apply the model to the streaming data
     prediction = model.transform(streaming_df)
-    print("Schema del DataFrame di Kafka dopo la predizione:")
-    prediction.printSchema()
+    #print("Schema del DataFrame di Kafka dopo la predizione:")
+    #prediction.printSchema()
 
     prediction = prediction.withColumn("Flow ID", col("flow_id_backup"))
     prediction = prediction.withColumn("label_indexed", col("label_verification"))
     prediction = prediction.select("Flow ID", "prediction", "label_indexed") # We added the label column to the prediction DataFrame for verification purposes
 
-    prediction = prediction.withColumn("message", when(col("prediction") != 3.0, "Attenzione! Intrusione rilevata!").otherwise("Nessuna intrusione rilevata."))
+    # Customize the output message
+    dictionary = {0.0: "DDoS", 1.0: "Probe", 2.0: "Normal", 3.0: "Dos", 4.0: "BFA", 5.0: "Web-Attack", 6.0: "BOTNET", 7.0: "U2R"}
+    
+    message_expr = when(col("prediction") == 2.0, "Nessuna intrusione rilevata.")
+    for key, value in dictionary.items():
+        if key != 2.0:
+            message_expr = message_expr.when(col("prediction") == key, f"Attenzione! Attacco di tipo {value} rilevato!")
+    prediction = prediction.withColumn("message", message_expr)
 
     query = (prediction
              .writeStream
