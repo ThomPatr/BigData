@@ -76,6 +76,7 @@ class Preprocessing():
         return train_df, selected_features
     
     def apply_correlation_selector(self, spark, train_df, selected_features):
+        builtins_abs = __builtins__["abs"]
         # Apply correlation selector to the feature selected by the variance threshold
         print("\nProcediamo con la CORRELATION-BASED FEATURE SELECTION.")
         target_col = ["label_indexed"]
@@ -115,12 +116,42 @@ class Preprocessing():
         correlation_df = spark.createDataFrame(correlation_data, ["feature", "correlation"])
         correlation_df = correlation_df.withColumn("abs_correlation", abs(col("correlation"))) # Add a new column with the absolute value of the correlation
         correlation_df = correlation_df.orderBy(col("abs_correlation").desc()) # Order by absolute correlation
-        correlation_df.show(truncate=False)
 
-        # Select only the first 15 features with the highest absolute correlation
-        selected_features = [row.feature for row in correlation_df.head(15)]
+        # Instead of creating a new Correlation matrix, we can compare the correlation between the features considering the previous correlation matrix
+        selected_features.remove("label_indexed") # Remove the label column from the selected features
+        removed_features = []
+        for row in correlation_df.collect():
+            for i in range(len(selected_features)):
+                corr_value = corr_matrix_df.loc[row.feature, selected_features[i]]
+                if builtins_abs(corr_value) > 0.97 and row.feature != selected_features[i]:
+                    removed_features.append(selected_features[i])
+
+        # Remove the features with high correlation
+        selected_features = [f for f in selected_features if f not in removed_features][:15]
         print(f"\nIl numero di feature selezionate dopo la Correlation-based Feature Selection è: {len(selected_features)}.")
-        print(f"\nLe feature selezionate dopo la Correlation-based Feature Selection sono: {selected_features}.")       
+        print(f"\nLe feature selezionate dopo la Correlation-based Feature Selection sono: {selected_features}.")     
+
+        # Define the new Correlation matrix between the selected features
+        selected_features.append("label_indexed") # Add the label column back to the selected features
+        new_df_corr = train_df.select(selected_features)
+        new_assembler = VectorAssembler(inputCols=selected_features, outputCol="selected_features")
+        new_df_corr = new_assembler.transform(new_df_corr)
+        new_corr_matrix =  Correlation.corr(new_df_corr, column="selected_features", method="spearman")
+        new_corr_matrix_sns = new_corr_matrix.collect()[0][0].toArray()
+        new_corr_matrix_df = pd.DataFrame(data = new_corr_matrix_sns, columns=selected_features, index=selected_features)
+
+        plt.figure(figsize=(50, 50))
+        sns.heatmap(new_corr_matrix_df,
+                    xticklabels=new_corr_matrix_df.columns.values,
+                    yticklabels=new_corr_matrix_df.columns.values,
+                    cmap="coolwarm",
+                    annot=True)
+        plt.title("Matrice di correlazione tra le feature selezionate - Metodo di Spearman", fontsize=30)
+        plt.savefig(config.FIGURES_PATH + "/updated_correlation_matrix.png", dpi=300, bbox_inches="tight")
+        plt.show()
+        plt.close()
+
+        selected_features.remove("label_indexed") # Remove the label column from the selected features      
 
         return selected_features
     

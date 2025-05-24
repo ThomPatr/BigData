@@ -42,6 +42,7 @@ class Classification():
         for i in range(len(classes)):
             plt.plot(fpr[i], tpr[i],
                     label=f"Class {classes[i]} (AUC = {roc_auc[i]:.6f})")
+                    
 
         plt.plot([0, 1], [0, 1], 'k--', label='Random Guess')
         plt.xlim([0.0, 1.0])
@@ -54,6 +55,34 @@ class Classification():
         plt.tight_layout()
 
 
+    def pca_analysis(self, train, final_features):
+
+        assembler = VectorAssembler(inputCols=final_features, outputCol="features_assembled")
+        scaler = StandardScaler(inputCol="features_assembled", outputCol="features_scaled")
+        pipeline = Pipeline(stages=[assembler, scaler])
+
+        train = pipeline.fit(train).transform(train)
+        pca = PCA(k=len(final_features), inputCol="features_scaled", outputCol="pca_features")
+        model = pca.fit(train)
+
+        var_explained = model.explainedVariance.toArray() # Get how much variance is explained by each component
+        cumulative_var_explained = np.cumsum(var_explained) # Get the cumulative variance explained
+
+        plt.figure(figsize=(8, 6))
+        plt.bar(range(1, len(cumulative_var_explained) + 1), var_explained, align="center", label="Individual variance explained", alpha=0.7, color="limegreen") # bar diagram to see the variance explained by each component
+        plt.step(range(1, len(cumulative_var_explained) + 1), cumulative_var_explained, where="mid", label="Cumulative variance explained", color="green")
+        plt.xlabel("Principal Components")
+        plt.ylabel("Variance Explained")
+        plt.xticks(np.arange(1, len(var_explained) + 1, 1))
+        plt.legend(loc="center right")
+        plt.title("Variance Explained by Principal Components")
+        plt.savefig(config.FIGURES_PATH + "/pca_variance_explained.png", dpi=300)
+        plt.close()       
+
+        # Cumulative variance explained
+        for i, sum in enumerate(cumulative_var_explained):
+            print("PC" + str(i+1), f"Cumulative variance: {cumulative_var_explained[i]*100} %")
+
 
     def rf_classification(self, train, test, final_features):
         # Random Forest Classification
@@ -64,7 +93,7 @@ class Classification():
 
         if config.pca_bool:
             # print("Utilizziamo la PCA.")
-            pca = PCA(k=5, inputCol="features_scaled", outputCol="pca_features") # Reduce the dimensionality of the features to 5 components
+            pca = PCA(k=config.pca_k, inputCol="features_scaled", outputCol="pca_features") # Reduce the dimensionality of the features to 5 components
             rf = RandomForestClassifier(featuresCol="pca_features", labelCol="label_indexed")
             pipeline_rf = Pipeline(stages=[assembler, scaler, pca, rf])
         else:
@@ -84,7 +113,7 @@ class Classification():
             validator = CrossValidator(estimator=pipeline_rf,
                                     estimatorParamMaps=paramGrid_rf,
                                     evaluator=evaluator_rf,
-                                    numFolds=5) # 5-fold cross-validation
+                                    numFolds=config.cross_validation_folds) # 5-fold cross-validation
         else:
             # print("Utilizziamo la train-validation split.")
             validator = TrainValidationSplit(estimator=pipeline_rf,
@@ -139,7 +168,7 @@ class Classification():
         scaler = StandardScaler(inputCol="features_assembled", outputCol="features_scaled")
 
         if config.pca_bool:
-            pca = PCA(k=5, inputCol="features_scaled", outputCol="pca_features")
+            pca = PCA(k=config.pca_k, inputCol="features_scaled", outputCol="pca_features")
             dt = DecisionTreeClassifier(featuresCol="pca_features", labelCol="label_indexed")
             pipeline_dt = Pipeline(stages=[assembler, scaler, pca, dt])
         else:
@@ -156,7 +185,7 @@ class Classification():
             validator = CrossValidator(estimator=pipeline_dt,
                                     estimatorParamMaps=paramGrid_dt,
                                     evaluator=evaluator_dt,
-                                    numFolds=5)
+                                    numFolds=config.cross_validation_folds)
         else:
             validator = TrainValidationSplit(estimator=pipeline_dt,
                                             estimatorParamMaps=paramGrid_dt,
@@ -211,11 +240,11 @@ class Classification():
 
         num_classes = train.select("label_indexed").distinct().count()
         if config.pca_bool:
-            pca = PCA(k=5, inputCol="features_scaled", outputCol="pca_features")
+            pca = PCA(k=config.pca_k, inputCol="features_scaled", outputCol="pca_features")
             mlp = MultilayerPerceptronClassifier(
                     featuresCol="pca_features",
                     labelCol="label_indexed",
-                    layers=[5, 10, 5, num_classes],
+                    layers=[config.pca_k, 20, 10, num_classes],
                     blockSize=128,
                     maxIter=100,
                     seed=42
@@ -225,7 +254,7 @@ class Classification():
             mlp = MultilayerPerceptronClassifier(
                     featuresCol="features_scaled",
                     labelCol="label_indexed",
-                    layers=[len(final_features), 10, 5, num_classes],
+                    layers=[len(final_features), 20, 10, num_classes],
                     blockSize=128,
                     maxIter=100,
                     seed=42
@@ -233,8 +262,10 @@ class Classification():
             pipeline_mlp = Pipeline(stages=[assembler, scaler, mlp])
 
         paramGrid_mlp = (ParamGridBuilder()
-                             .addGrid(mlp.maxIter, [25, 50])
-                             .addGrid(mlp.blockSize, [32, 64])
+                             .addGrid(mlp.maxIter, [50, 100])
+                             .addGrid(mlp.blockSize, [64, 128])
+                             .addGrid(mlp.stepSize, [0.05, 0.1])
+                             #.addGrid(mlp.layers, [[len(final_features), 20, 10, num_classes], [len(final_features), 10, 5, num_classes]])
                              .build())
         
         evaluator_mlp = MulticlassClassificationEvaluator(labelCol="label_indexed", predictionCol="prediction", metricName="accuracy")
@@ -243,7 +274,7 @@ class Classification():
             validator = CrossValidator(estimator=pipeline_mlp,
                                     estimatorParamMaps=paramGrid_mlp,
                                     evaluator=evaluator_mlp,
-                                    numFolds=5)
+                                    numFolds=config.cross_validation_folds)
         else:
             validator = TrainValidationSplit(estimator=pipeline_mlp,
                                             estimatorParamMaps=paramGrid_mlp,
@@ -252,6 +283,13 @@ class Classification():
         
         start_time = time.time()
         model = validator.fit(train)
+
+        #best_model = model.bestModel
+        #best_mlp_stages = best_model.stages[-1]
+        #print(f"Parametri ottimali del modello: {best_mlp_stages.extractParamMap()}")
+        #print(f"Numero di epoche: {best_mlp_stages.getMaxIter()}")
+        #print(f"Dimensione del blocco: {best_mlp_stages.getBlockSize()}")
+
         train_time = time.time() - start_time
         print(f"Tempo di addestramento del modello: {train_time:.2f} secondi")
         predictions = model.transform(test)
@@ -290,6 +328,10 @@ class Classification():
         return model, accuracy, precision, recall, f1, train_time
     
     def best_model(self, train, test, final_features):
+
+        # Perform PCA analysis if required
+        if config.pca_bool:
+            self.pca_analysis(train, final_features)
 
         results = {}
 

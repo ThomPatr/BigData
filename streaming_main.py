@@ -1,6 +1,6 @@
 from pyspark.sql import SparkSession
 from pyspark.ml.pipeline import PipelineModel
-from pyspark.ml.tuning import TrainValidationSplitModel
+from pyspark.ml.tuning import TrainValidationSplitModel, CrossValidatorModel
 from pyspark.sql.functions import expr, from_json, col
 from pyspark.sql.types import StructType
 from pyspark.sql.functions import when
@@ -21,7 +21,10 @@ if __name__ == '__main__':
              .master("local[*]")
              .getOrCreate())
     
-    model = TrainValidationSplitModel.load(config.MODEL_PATH).bestModel
+    if config.cross_validation_bool:
+        model = CrossValidatorModel.load(config.MODEL_PATH).bestModel
+    else:
+        model = TrainValidationSplitModel.load(config.MODEL_PATH).bestModel
 
     kafka_df = (spark
                 .readStream

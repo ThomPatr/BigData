@@ -20,4 +20,7 @@ TOPIC_NAME = 'traffic-data'
 pca_bool = True  # Set to True to use PCA for dimensionality reduction
 cross_validation_bool = True  # Set to True to use cross-validation
 
+pca_k = 12 # Number of principal components to keep
+cross_validation_folds = 5 # Number of folds for cross-validation   
+
 
